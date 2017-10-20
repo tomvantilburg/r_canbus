@@ -19,8 +19,9 @@ con <- dbConnect(drv, dbname = "research",
                  host = "localhost", port = 5433,
                  user = "postgres")
 df_postgres <- dbGetQuery(con, "
-        SELECT signalid, value, date_trunc('day',time) as time from canbus.data_2017 
+        SELECT signalid, avg(value) as value, date_trunc('day',time) as time from canbus.data_2017 
         WHERE signalid = 13
+        GROUP BY signalid, date_trunc('day',time)
 ")
 #ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
 ggplot(df_postgres,aes(time,value)) + geom_point(shape=".") + geom_smooth() + theme_bw()
@@ -31,4 +32,4 @@ df_postgres <- dbGetQuery(con, "
         GROUP BY signalid, date_part('week',time)
 ")
 #ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
-ggplot(df_postgres,aes(time,value)) + geom_point(shape=".") + geom_smooth() + theme_bw()
+ggplot(df_postgres,aes(time,value)) + geom_point(shape="o") + geom_smooth() + theme_bw()
