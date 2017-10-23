@@ -9,7 +9,7 @@ df_postgres <- dbGetQuery(con, "
          SELECT location, speed_avg, flow_sum, date, 
           round(date_part('hour',date)) tod
         FROM ndw.trafficspeed_2 
-        WHERE location = 'RWS01_MONIBAS_0021hrl0336ra'
+        WHERE location = 'RWS01_MONIBAS_0041hrl0241ra'
       AND date > '2017-10-12' --now() - '7 days'::interval
       AND date < '2017-10-13'
       --AND date_part('dow',date) > 0
