@@ -26,8 +26,8 @@ autos = unique(speed$auto)
 print(length(autos))
 
 
-plot(NULL, xlim=c(0,150), ylim=c(-15,2), xlab = 'snelheid begin (km/h)', ylab = 'versnelling (km/h/s)', las=1)
-plot(NULL, xlim=c(-100,0), ylim=c(0,30), xlab = 'snelheidsverschil (km/h)', ylab = 'versnelling (km/h/s)', las=1)
+# plot(NULL, xlim=c(0,150), ylim=c(-15,2), xlab = 'snelheid begin (km/h)', ylab = 'versnelling (km/h/s)', las=1)
+plot(NULL, xlim=c(-100,0), ylim=c(0,30), xlab = 'snelheidsverschil (km/h)', ylab = 'tijdsverschil (s)', las=1)
 for (auto in autos){
   
   # kies een willekeurige auto
@@ -67,11 +67,9 @@ for (auto in autos){
   
   v = data.frame(t(v))
   colnames(v)  = c('rem_aan', 'rem_uit', 't0', 'v0', 't1', 'v1')
-  v$dt = v$t1-v$t0
+  v$dt = (v$t1 - v$t0)
   v$dv = (v$v1 - v$v0)
   v$a = v$dv / v$dt
-  #append(x = V, v$v0)
-  #append(x = V, v$v0)
   
   # rem-momenten met netto-toename in snelheid weglaten
   v[v$dv >= 0 & !is.na(v$a), c('a', 'dt')] <- NA
@@ -84,9 +82,9 @@ for (auto in autos){
 
 
 # test remmomenten voor een auto
-plot(s$time, s$speed, type='o', pch=16, cex=0.5)
-rug(x=b$time, col=2, lwd=2, ticksize =0.03)
-rug(x=l$time, col=3, lwd=2, ticksize =0.03)
+# plot(s$time, s$speed, type='o', pch=16, cex=0.5)
+# rug(x=b$time, col=2, lwd=2, ticksize =0.03)
+# rug(x=l$time, col=3, lwd=2, ticksize =0.03)
 
-col = rev(brewer.pal(n = 9, name = 'Reds'))
-rect(xleft = v$t0, xright = v$t1, ytop = v$v0, ybottom = v$v1, col=rgb(red=t(col2rgb(col[cut(v$a, b = 8)])), alpha = 100, maxColorValue = 255))
+# col = rev(brewer.pal(n = 9, name = 'Reds'))
+# rect(xleft = v$t0, xright = v$t1, ytop = v$v0, ybottom = v$v1, col=rgb(red=t(col2rgb(col[cut(v$a, b = 8)])), alpha = 100, maxColorValue = 255))
