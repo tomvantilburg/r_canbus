@@ -24,7 +24,7 @@ df_postgres <- dbGetQuery(con, "
         GROUP BY signalid, date_trunc('day',time)
 ")
 #ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
-ggplot(df_postgres,aes(time,value)) + geom_point(shape=".") + geom_smooth() + theme_bw()
+ggplot(df_postgres,aes(time,value)) + geom_point(shape="o") + geom_smooth() + theme_bw()
 
 df_postgres <- dbGetQuery(con, "
         SELECT signalid, count(value) as value, date_part('week',time) as time from canbus.data_2017 
