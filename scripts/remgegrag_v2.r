@@ -34,7 +34,7 @@ for (auto in autos){
   #i = 88
   #auto = autos[i]
   
-  print(which(autos==auto))
+  #print(which(autos==auto))
   
   # snelheid
   s = speed[speed$auto == auto,]
