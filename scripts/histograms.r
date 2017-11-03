@@ -33,3 +33,19 @@ df_postgres <- dbGetQuery(con, "
 ")
 #ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
 ggplot(df_postgres,aes(time,value)) + geom_point(shape="o") + geom_smooth() + theme_bw()
+
+#Histogram of time interval between speed measurements
+df_postgres <- dbGetQuery(con, "
+WITH diff AS (
+  SELECT vin,
+  geom,
+  date_part('seconds',time - lag(time) OVER (PARTITION BY vin ORDER BY time)) AS diff
+  FROM canbus.data_2017  
+  WHERE time > '2017-03-19'
+  AND signalid = 191
+)
+SELECT vin, max(diff) diff FROM diff 
+WHERE diff Is Not Null
+GROUP BY vin, geom;
+")
+ggplot(df_postgres,aes(diff)) + geom_histogram() +theme_bw()
