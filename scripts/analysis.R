@@ -34,3 +34,23 @@ ggplot(df_postgres,aes(date,vehicles)) + geom_line() + theme_bw()
 qmplot(lon, lat, data = df_postgres, geom = "blank", zoom = 7, maptype = "toner-background", darken = .7, legend = "topright") +
   stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = .3, color = NA) +
   scale_fill_gradient2("Measurements\nPropensity", low = "white", mid = "yellow", high = "red", midpoint = 0.25)
+
+#Heatmap of startpoints
+df_postgres <- dbGetQuery(con, "
+WITH ordered AS (
+  SELECT *
+    FROM canbus.data_2017  
+  WHERE time > '2017-03-19'
+  ORDER BY vin, time
+)
+SELECT
+vin,date_trunc('day',time), 
+round(ST_X(first(geom))::numeric,4) lon,
+round(ST_Y(first(geom))::numeric,4) lat
+FROM ordered
+GROUP BY vin, date_trunc('day',time);
+")
+ggplot(df_postgres,aes(date,vehicles)) + geom_line() + theme_bw()
+qmplot(lon, lat, data = df_postgres, geom = "blank", zoom = 7, maptype = "toner-background", darken = .7, legend = "topright") +
+  stat_density_2d(aes(fill = ..level..), geom = "polygon", alpha = .3, color = NA) +
+  scale_fill_gradient2("Measurements\nPropensity", low = "white", mid = "yellow", high = "red", midpoint = 0.25)
