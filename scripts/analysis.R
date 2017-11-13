@@ -15,10 +15,6 @@ df_postgres <- dbGetQuery(con, "
 #Conclusion: before 19-march id's are switched more then 1x a day
 ggplot(df_postgres,aes(date,vehicles)) + geom_line(color="steelblue") + theme_bw()
 
-library(ggmap)
-nl <- c(left = 3.5, bottom = 50.5, right = 7, top = 53.5)
-map <- get_stamenmap(nl, zoom = 7, maptype = "toner-lite")
-ggmap(map)
 
 #Types of measurements
 df_postgres <- dbGetQuery(con, "
@@ -56,6 +52,10 @@ ggplot(data=df_postgres, aes(x=n, y=freq)) +
   theme_minimal()
 
 
+library(ggmap)
+nl <- c(left = 3.5, bottom = 50.5, right = 7, top = 53.5)
+map <- get_stamenmap(nl, zoom = 7, maptype = "toner-lite")
+ggmap(map)
 
 #Heatmap of speedmeasurements
 df_postgres <- dbGetQuery(con, "
