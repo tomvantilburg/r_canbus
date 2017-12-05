@@ -12,5 +12,7 @@ speed <- dbGetQuery(con, "
           WHERE signalid = 191
 ")
 
+dbDisconnect(con)
+
 plot(density(speed$diff, na.rm=T, bw = 1), xlim=c(-20,20))
 abline(v=c(-5,0,5), lty=2)

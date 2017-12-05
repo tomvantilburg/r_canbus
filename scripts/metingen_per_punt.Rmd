@@ -1,0 +1,87 @@
+---
+title: "R-Canbus"
+output:
+  html_document:
+    df_print: paged
+---
+
+Inzicht in de snelheidsmetingen op de kaart. 
+
+```{r}
+require("RPostgreSQL")
+
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, 
+                 dbname = "research",
+                 host = "metis",
+                 #host = "localhost"
+                 port = 5433,
+                 user = "postgres")
+
+q = "
+  SELECT vin, 
+    min(time) as min_time, 
+    max(time) as max_time, 
+    COUNT(*) as count, 
+    min(value) min_v, 
+    max(value) as max_v, 
+    EXTRACT(EPOCH FROM (max(time)-MIN(time))) as dt, 
+    st_x(geom_rd), st_y(geom_rd) 
+    FROM canbus.data_2017
+    WHERE signalid = 191 AND time > '2017-09-01'
+    GROUP BY geom_rd, vin
+    ORDER BY vin, min_time;
+  "
+x <- dbGetQuery(con, q)
+```
+
+In veel gevallen is de snelheid van een voertuig meerdere malen geregistreerd op dezelfde locatie (zelfde X en Y), maar op verschillende tijdstippen (meerdere seconden verschil).
+
+```{sql connection=con}
+SELECT vin, time, value as speed, st_x(geom_rd), st_y(geom_rd)
+FROM canbus.data_2017
+WHERE signalid = 191
+ORDER BY vin, time 
+LIMIT 10;
+```
+
+
+```{r include=FALSE}
+dbDisconnect(con)
+```
+
+Hoe veel tijd zit er tussen eerste en laatste metingen op gps-punt? 
+```{r}
+hist(x = x$dt, breaks = c(seq(0,60,10),5000), right = T, xlim=c(0,60), freq = F, las=1,
+     xlab='tijd op zelfde gps-punt (s)')
+```
+
+Is er een relatie tussen aantal metingen op een punt en de tijd 'doorgebracht' op dat punt.
+```{r}
+smoothScatter(x$count, x$dt, ylim=c(0,100), xlim=c(0,40),
+              xlab='aantal snelheidsmetingen per gps-punt (-)',
+              ylab='tijdsverschil tussen eerste en laatste meting (s)',
+              nbin = c(50,50),
+              bandwidth = c(1,1))
+
+abline(coef = c(0,1), h=60, lty=2, col=1)
+grid()
+```
+
+Twee patronen: 
+
+* maximaal 1 meting per seconde, dus aantal metingen is in het algemeen niet groter dan het aantal seconden op een punt.
+* maximaal 60 seconden op een punt
+
+Uit eerdere analyses weten we dat er bij iedere snelheidsverandering van 5 km/u een nieuwe snelheidsmeting wordt getriggerd. Hoe is het aantal metingen op een punt gerelateerd aan de range van geregistreerde snelheden op dat punt?
+
+```{r}
+smoothScatter(x$count, y = x$max_v-x$min_v, 
+              xlim = c(0, 60),
+              xlab='aantal metingen', 
+              ylab = 'range snelheden (km/h)')
+grid()
+abline(coef=c(0,5), lty=2)
+```
+
+Volgens verwachting is het aantal metingen ongeveer evenredig met range van snelheid gedeeld door 5 -- of hoger dan dat. 
