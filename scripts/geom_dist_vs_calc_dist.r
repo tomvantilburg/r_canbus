@@ -59,20 +59,9 @@ dbDisconnect(con)
 a$time = as.POSIXct(a$time)
 datum = as.Date(a$time[1])
 
-# scatterplot van afstand met ST_DISTANCE en berekende afstand met avgspeed * dt
-#png(filename = 'D:/canbus/distance_compared.png', width=15, height=10, units = 'cm', res=180)
-plot(a$calc_dist, a$geom_dist, xlim=c(0,1000), ylim=c(0,1000), 
-     xlab='distance from speed and time (m)',
-     ylab='distance between GPS positions (m)',
-     las=1)
-abline(coef=c(1,1))
-#dev.off()
-
-col1 = 'darkblue'
-col2 = 'black'
-par(mar=c(4,4,3,1))
 # plot verloop van afstand tussen gps-meetpunten gedurende rit
-png(filename = 'D:/canbus/fig/distance_compared_scatter.png', width=15, height=10, units = 'cm', res=300)
+png(filename = './fig/distance_between_gps_points.png', width=15, height=10, units = 'cm', res=300)
+par(mar=c(4,4,3,1))
 plot(range(a$time), range(a$geom_dist, na.rm=T), type='n', xaxt='n',
      xlab = 'time',
      ylab = 'distance between points (m)',
@@ -92,9 +81,16 @@ lines(a$time, a$calc_dist, col=col2, lty=2)
 dev.off()
 
 
-delta = a$geom_dist - a$calc_dist
-plot(a$geom_dist, delta, las=1, xlab='geometric distance (m)', ylab='geometric - calculated (m)')
-fit = lm(delta~a$geom_dist)
-summary(fit)$r.squared
-abline(fit, lty=2, col=2)
+# scatterplot van afstand met ST_DISTANCE en berekende afstand met avgspeed * dt
+#png(filename = 'D:/canbus/distance_compared.png', width=15, height=10, units = 'cm', res=180)
+plot(a$calc_dist, a$geom_dist, xlim=c(0,1000), ylim=c(0,1000), 
+     xlab='distance from speed and time (m)',
+     ylab='distance between GPS positions (m)',
+     las=1)
+abline(coef=c(1,1))
+#dev.off()
+
+col1 = 'darkblue'
+col2 = 'black'
+
 

@@ -1,7 +1,7 @@
 WITH a as (
   SELECT vin, time, value, signalid, geom
   FROM canbus.data_2017 
-  WHERE time > '2017-04-01' 
+  WHERE time > '2017-09-01' 
   --WHERE vin = '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682' 
 ),
 
@@ -65,8 +65,16 @@ SELECT vin, time, geom from b where value = 0
 ),
 ***/
 -- selecteer rem-uit momenten
-c as (SELECT vin, aan, v0 as v1, t_v1 FROM b4 WHERE signal = 'brakeoff')
+c as (SELECT vin, aan, v0 as v1, t_v1 FROM b4 WHERE signal = 'brakeoff'),
 
 -- voeg snelheid en tijdstip van rem-uit toe aan rem-aan o.b.v. timestamp
-SELECT b4.vin, b4.aan as brakeon, b4.uit as brakeoff, b4.dt1, b4.v0, c.v1, b4.geom, b4.t_v0, c.t_v1,  EXTRACT(EPOCH FROM c.t_v1 - b4.t_v0) as dt2 FROM b4
-JOIN c ON b4.uit = c.aan and b4.vin = c.vin;
+d as (SELECT b4.vin, b4.aan as brakeon, b4.uit as brakeoff, b4.dt1, b4.v0, c.v1, b4.v0 - c.v1 as dv, b4.geom, b4.t_v0, c.t_v1, EXTRACT(EPOCH FROM c.t_v1 - b4.t_v0) as dt2 FROM b4
+JOIN c ON b4.uit = c.aan and b4.vin = c.vin)
+
+e as (SElECT vin, count(*) as n, ST_COLLECT(geom) as geom, to_timestamp(floor((extract('epoch' from brakeon) / 300 )) * 300) as tt 
+FROM d 
+WHERE dv < 5 and dt1 < 3 AND v0 > 100
+GROUP BY vin, to_timestamp(floor((extract('epoch' from brakeon) / 300 )) * 300))
+
+SELECT * from  e WHERE n >= 5; 
+

@@ -53,14 +53,14 @@ dbDisconnect(con)
 Hoe veel tijd zit er tussen eerste en laatste metingen op gps-punt? 
 ```{r}
 hist(x = x$dt, breaks = c(seq(0,60,10),5000), right = T, xlim=c(0,60), freq = F, las=1,
-     xlab='tijd op zelfde gps-punt (s)')
+     xlab='time between first and least measurement at point (s)')
 ```
 
 Is er een relatie tussen aantal metingen op een punt en de tijd 'doorgebracht' op dat punt.
 ```{r}
 smoothScatter(x$count, x$dt, ylim=c(0,100), xlim=c(0,40),
-              xlab='aantal snelheidsmetingen per gps-punt (-)',
-              ylab='tijdsverschil tussen eerste en laatste meting (s)',
+              xlab='# measurements',
+              ylab='time between first and least measurement at point (s)',
               nbin = c(50,50),
               bandwidth = c(1,1))
 
@@ -78,8 +78,8 @@ Uit eerdere analyses weten we dat er bij iedere snelheidsverandering van 5 km/u 
 ```{r}
 smoothScatter(x$count, y = x$max_v-x$min_v, 
               xlim = c(0, 60),
-              xlab='aantal metingen', 
-              ylab = 'range snelheden (km/h)')
+              xlab='# measurements', 
+              ylab = 'range of speed measurements (km/h)')
 grid()
 abline(coef=c(0,5), lty=2)
 ```
