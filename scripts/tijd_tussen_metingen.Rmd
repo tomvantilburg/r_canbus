@@ -1,0 +1,86 @@
+---
+title: "R Notebook - tid tussen snelheidsmetingen"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+```{r}
+require("RPostgreSQL")
+
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, 
+                 dbname = "research",
+                 host = "metis",
+                 #host = "localhost"
+                 port = 5433,
+                 user = "postgres")
+
+q = "
+SELECT vin, 
+       time, 
+       EXTRACT (EPOCH FROM time - LAG (time, 1)  OVER (PARTITION BY vin ORDER BY vin, time)) dt, 
+       value
+FROM canbus.data_2017 
+WHERE signalid = 191 AND time > '2017-09-01';
+  "
+x <- dbGetQuery(con, q)
+```
+
+
+```{sql connection=con}
+SELECT vin, time, EXTRACT (EPOCH FROM time - LAG (time, 1)  OVER (PARTITION BY vin ORDER BY vin, time)) dt, value
+FROM canbus.data_2017 WHERE signalid = 191 LIMIT 100;
+```
+
+```{r include=FALSE}
+dbDisconnect(con)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+getmode <- function(v) {
+   uniqv <- unique(na.omit(v))
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+```
+
+
+Hoe veel tijd zit er tussen opeenvolgende snelheidsmetingen? 
+```{r}
+dx = 0.5
+hist(x = x$dt, breaks = seq(from = 0, to = max(x$dt, na.rm=T)+1 ,by = dx), xlim=c(0,60), freq = F, las=1,
+     xlab='time between speeds measurements (s)')
+abline(v=getmode(x$dt)-0.5*dx, lty=2, col=2)
+text(x = 1,  y = 0.4, labels = 'dt = 1.0', pos = 4, cex=0.6, col=2)
+```
+
+Veel snelheidsmetingen volgen elkaar op na exact 1.0 s. Is dit een vast tijdsinterval in de canbus-data?
+Daarnaast nog waarneming met _dt_ < 1 s en zelfs _dt_ == 0 s : hoe komen die tot stand?
+```{r}
+# dt = 0 s
+dt00  = subset(x, dt==0)
+# dt tussen 0 en 1 s
+dt01 = subset(x, dt>0 & dt <1)
+# dt >= 1 s
+dt11  = subset(x, dt>=1)
+
+par(mfrow=c(3,1), oma=c(1,0,0,0), mar=c(4,2,1,1))
+plot(density(dt11$value, bw=5, from = 0), col=2, xlim=c(0,200), main='dt >= 1 s', yaxt='n', xlab='')
+legend(x = 'topright', legend = paste('n = ', nrow(dt11)))
+plot(density(dt00$value, bw=5, from = 0), col=2, xlim=c(0,200), main='dt = 0 s', yaxt='n', xlab='')
+legend(x = 'topright', legend = paste('n = ', nrow(dt00)))
+plot(density(dt01$value, bw=5, from = 0), col=2, xlim=c(0,200), main = '0 < dt < 1 s', yaxt='n', xlab='')
+legend(x = 'topright', legend = paste('n = ', nrow(dt01)))
+mtext(text = 'speed (km/h)', outer = T, side = 1)
+mtext(text = 'density', outer = T, side = 2, line = -1)
+```
+Waarnemingen met _dt_ == 0 s zijn gevallen waarbij het signaal twee maal is verzonden.
+
+```{r}
+i = min(which(x$dt == 0))
+x[ (i-5) : (i+4), c('time', 'dt', 'value')]
+```
+
+Waarnemingen met _dt_ tussen 0 en 1 s komen uitsluitend voor bij zeer lage snelheden (< 5 km/h). Mogelijk wordt een altijd een meting doorgegeven als de auto tot stilstand komt.
+

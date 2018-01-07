@@ -2,89 +2,55 @@
 # naar dataframe
 
 require("RPostgreSQL")
-library("RColorBrewer")
+
 drv <- dbDriver("PostgreSQL")
 con <- dbConnect(drv, dbname = "research",
-                 host = "localhost", port = 5433,
+                 host = "metis", port = 5433,
                  user = "postgres")
+
+fn = "C:/Users/joepk/Documents/GitHub/r_canbus/scripts/query_braking.sql"
+zz <- file(fn, "r")
+#q = readLines(zz)
+q <- readChar(zz, file.info(fn)$size)
+braking <- dbGetQuery(con, q)
+close(zz)
 
 
 speed <- dbGetQuery(con, "
-                    SELECT value as speed, vin as auto, time, location from canbus.data_2017
-                    WHERE signalid = 191 AND time >= '2017-09-01'
+                    SELECT value as speed, vin, time, location from canbus.data_2017
+                    WHERE signalid = 191 AND vin = '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682'
                     ")
-
-brake <- dbGetQuery(con, "
-                    SELECT value as brake, vin as auto, time, location from canbus.data_2017
-                    WHERE signalid = 25 AND time >= '2017-09-01'
-                    ")
-
 dbDisconnect(con)
 
-# lijst van unieke auto-id's
-autos = unique(speed$auto)
-print(length(autos))
 
+braking$cols = cut(braking$v0, breaks = seq(0,150,length.out = 11))
+colramp = heat.colors(n=10, alpha=1)
+with(braking2,plot(v1-v0, dt, ylim=c(0,60), col=colramp[cols], xlim=c(-150,0)))
 
-# plot(NULL, xlim=c(0,150), ylim=c(-15,2), xlab = 'snelheid begin (km/h)', ylab = 'versnelling (km/h/s)', las=1)
-plot(NULL, xlim=c(-100,0), ylim=c(0,30), xlab = 'snelheidsverschil (km/h)', ylab = 'tijdsverschil (s)', las=1)
-for (auto in autos){
-  
-  # kies een willekeurige auto
-  #i = 88
-  #auto = autos[i]
-  
-  #print(which(autos==auto))
-  
-  # snelheid
-  s = speed[speed$auto == auto,]
-  
-  # rem aan
-  b = brake[brake$brake==1 & brake$auto == auto,]
-  
-  # rem uit
-  l = brake[brake$brake==0 & brake$auto == auto,]
-  
-  # zoek eerst waarneming 'brake = 0' volgend op 'brake = 1'
-  eerstvlgnd = apply(X = b, MARGIN = 1, FUN = function(x) {as.vector(
-    c(as.numeric(as.POSIXct(x[3])),
-      l$time[min(which(as.POSIXct(l$time) > as.POSIXct(x[3])))]))})
-  
-  eerstvlgnd = data.frame(t(eerstvlgnd))
-  colnames(eerstvlgnd) = c('rem_aan', 'rem_uit')
-  
-  # als een waarneming brake = 0 aan meerdere brake = 1 gekoppeld is, toekennen aan laatste
-  #abline(v=eerstvlgnd[duplicated(eerstvlgnd$X2),2])
-  rem = eerstvlgnd[!rev(duplicated(rev(eerstvlgnd$rem_uit))),]
-  
-  v = apply(X = rem, MARGIN = 1, FUN = function(x) {as.vector(
-    c(as.numeric(x[1]),
-      as.numeric(x[2]),
-      s$time[min(which(as.numeric(s$time) > x[1]))],
-      s$speed[min(which(as.numeric(s$time) > x[1]))], 
-      s$time[max(which(as.numeric(s$time) < x[2]))],
-      s$speed[max(which(as.numeric(s$time) < x[2]))]))})
-  
-  v = data.frame(t(v))
-  colnames(v)  = c('rem_aan', 'rem_uit', 't0', 'v0', 't1', 'v1')
-  v$dt = (v$t1 - v$t0)
-  v$dv = (v$v1 - v$v0)
-  v$a = v$dv / v$dt
-  
-  # rem-momenten met netto-toename in snelheid weglaten
-  v[v$dv >= 0 & !is.na(v$a), c('a', 'dt')] <- NA
-  v[v$dt <= 0 & !is.na(v$dt), c('a','dt')] <- NA
-  
-  
-  #points(v$v0, v$a, col=rgb(0,0,0,0.05), pch=16, cex=0.5)
-  points(v$dv, v$dt, col=rgb(0,0,0,0.1), pch=16, cex=0.5)
+# datum is niet relevant, dus normaliseren naar 1 januri 2017
+# makkelijker om dan tijdsvenster aan te passen
+braking$on = strptime(paste('1/1/2017',substr(braking$brakeon, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+braking$off = strptime(paste('1/1/2017',substr(braking$brakeoff, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+speed$time2 = strptime(paste('1/1/2017',substr(speed$time, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+
+par(mfrow=c(4,3), mar=c(1,1,1,1), oma = c(2,2,0,0))
+for (cut in sort(na.omit(unique(braking$cols)))){
+  x = braking[braking$cols == cut, c('v0', 'v1', 'dt2', 'cols') ]
+  with(x,plot(v0-v1, dt2, ylim=c(0,60), col=rgb(0,0,0,0.1), main=cut, xlim=c(0,150), xaxt='n', yaxt='n'))
+  axis(1, lab=F)
+  axis(2, lab=F)
 }
+mtext(text = 'snelheidsafname (km/h)', side = 1, outer = T)
+mtext(text = 'remtijd (s)', side = 2, outer = T)
+
+# clusteren binnen tijd: meerdere kleine remacties binnen 5 minuten?
 
 
-# test remmomenten voor een auto
-# plot(s$time, s$speed, type='o', pch=16, cex=0.5)
-# rug(x=b$time, col=2, lwd=2, ticksize =0.03)
-# rug(x=l$time, col=3, lwd=2, ticksize =0.03)
-
-# col = rev(brewer.pal(n = 9, name = 'Reds'))
-# rect(xleft = v$t0, xright = v$t1, ytop = v$v0, ybottom = v$v1, col=rgb(red=t(col2rgb(col[cut(v$a, b = 8)])), alpha = 100, maxColorValue = 255))
+# plot voor enkele auto
+# plot(speed$time2, speed$speed, type='o', pch=21, cex=0.4,
+#   xlim=c(as.numeric(as.POSIXct("2017-01-01 16:00:00")), as.numeric(as.POSIXct("2017-01-01 16:30:00"))), xaxt='n')
+# a = subset(braking, braking$vin == '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682')
+# rect(xleft = braking$on, xright = braking$off, ytop = 140, ybottom = 0, col=rgb(0,0,0,0.2), border = NA)
+# 
+# r <- as.POSIXct(round(range(speed$time2), "hours"))
+# axis.POSIXct(1, at = seq(r[1], r[2], by = "15 min"), format = "%H:%M")
