@@ -1,0 +1,32 @@
+---
+title: "Combining canbus with NDW data"
+output: html_notebook
+---
+
+How does the canbus speed compare to the actual speed on the road measured by the NDW loops?
+```{r}
+
+require("RPostgreSQL")
+require("ggplot2")
+require("hexbin")
+
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = "research",
+                 host = "localhost", port = 5433,
+                 user = "postgres")
+
+#How many unique id's are active per day
+df_postgres <- dbGetQuery(con, "SELECT c_time, c_speed, l_speed FROM canbus.tmp_canbusndwspeed;");
+
+ggplot(df_postgres,aes(c_time)) +
+  geom_line(aes(y = c_speed, color = "Canbus")) + 
+  geom_line(aes(y = l_speed, color = "NDW"))  +
+  geom_vline(type=4,xintercept=as.numeric(as.POSIXct("2017-09-14 17:06:00+02"))) +
+  theme_bw()
+
+```
+Not bad, although there are some significant outliers. These are mainly explainable by:
+1. GPS point is inaccurate and assigned to wrong NDW loop
+2. Vehicle is standing next to the road (under-estimate)
+3. Vehicle is taking the exit-ramp, bypassing traffic (over-estimate)
+

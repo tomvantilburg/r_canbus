@@ -1,0 +1,40 @@
+---
+title: "Extraordinary canbus measurements"
+output: html_notebook
+---
+```{r include=FALSE}
+require("RPostgreSQL")
+require("ggplot2")
+require("hexbin")
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = "research",
+                 host = "localhost", port = 5433,
+                 user = "postgres")
+```
+
+Highest speed measured is on a max 130 km/h road
+```{r echo=FALSE}
+require("RPostgreSQL")
+require("ggplot2")
+require("hexbin")
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = "research",
+                 host = "localhost", port = 5433,
+                 user = "postgres")
+
+#How many unique id's are active per day
+df_postgres <- dbGetQuery(con, "
+  SELECT time, speed
+  FROM canbus.data_2017_normalized 
+  WHERE speed > 10
+  AND vin = '30f19917044b60833de9e1024cb59fb85e28e2919411222afdaa9c4bc6799c2c'
+  AND date_part('hour',time) >= 21
+  AND date_part('minutes',time) >= 30
+  AND date_part('hour',time) < 22
+  AND date_part('minutes',time) < 45
+  ORDER BY time
+")
+#Conclusion: there are idiots driving these cars
+ggplot(df_postgres,aes(time,speed)) + geom_line(color="steelblue") + theme_bw()
+```
+
