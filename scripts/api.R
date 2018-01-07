@@ -1,3 +1,8 @@
+###
+# api for getting online plots (run with plumbeR)
+# author: TomT
+###
+
 #* @get /normalDistribution
 normalDistribution <- function(n = 10) {
   rnorm(n)

@@ -1,0 +1,84 @@
+---
+title: "Vehicles on the road"
+output: html_notebook
+---
+```{r include=FALSE}
+require("RPostgreSQL")
+require("ggplot2")
+require("hexbin")
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = "research",
+                 host = "localhost", port = 5433,
+                 user = "postgres")
+```
+
+
+How many unique id's are being used every day? This should give us an idea of the amount of vehicles being used. 
+```{r echo=FALSE}
+require("RPostgreSQL")
+require("ggplot2")
+require("hexbin")
+drv <- dbDriver("PostgreSQL")
+con <- dbConnect(drv, dbname = "research",
+                 host = "localhost", port = 5433,
+                 user = "postgres")
+
+#How many unique id's are active per day
+df_postgres <- dbGetQuery(con, "
+  SELECT count(DISTINCT vin) vehicles, date_trunc('day',time) date
+  FROM canbus.data_2017 
+  GROUP BY date_trunc('day',time)
+  ORDER BY date_trunc('day',time)
+")
+#Conclusion: before 19-march id's are switched more then 1x a day
+ggplot(df_postgres,aes(date,vehicles)) + geom_line(color="steelblue") + theme_bw()
+```
+
+As you can see, before March 19'th there where over 600 unique id's per day. Since we know there are only 20 cars in our dataset, it appears that in the beginnen the id's were switched every so many minutes. Therefore, for most analyses we will use data after March 19'th.
+
+# Signals measured
+
+When we look at the number of signals measured, it becomes clear what data is mostly measured:
+```{r echo=FALSE}
+#Histogram of number of measurements per signal
+df_postgres <- dbGetQuery(con, "
+  SELECT b.name, count(a.signalid) n
+  FROM canbus.data_2017 a
+  INNER JOIN canbus.signals b
+  ON a.signalid = b.signalid
+  WHERE time > '2017-03-19'
+  GROUP BY b.name
+  ORDER BY count(a.signalid) DESC
+")
+df_postgres$name <- factor(df_postgres$name, levels = df_postgres$name[order(df_postgres$n)])
+ggplot(df_postgres, aes(label = n,x=name, y=n)) +
+  geom_bar(stat='identity',fill='steelblue') +
+  geom_text(aes(label = n,x=name,y=300000),size = 3) +
+  coord_flip() + theme_minimal()
+```
+Obviously, the large majority of measurements consists of *speed* and *brake* measurements since a new speed is record on every change of roughly 5km/h and the brake is often used. However, to put this data into better perspective, we should also look at how long some of the actors were used. For instance, a slow wiper may be turned on once but still being used for more than an hour, thus giving an underestimation of how long it has been used. Therefore we will later check for the boolean (on/off) signals over what distance and what time interval they have been used.
+
+# GPS updates
+One striking feature of this canbus dataset is that the same GPS position is used for multiple measurements, even with speed measurements. The followin graph shows the amount of measurements per unique GPS position. 
+```{r echo=FALSE}
+df_postgres <- dbGetQuery(con, "
+  WITH grouped AS (
+    SELECT geom,count(geom) n
+    FROM canbus.data_2017 
+    WHERE signalid = 191 
+    AND value > 10
+    AND time > '2017-03-19'
+    GROUP BY geom
+  )
+  SELECT n, count(geom) freq
+  FROM grouped
+  GROUP BY n
+  ORDER BY n
+")
+ggplot(data=df_postgres, aes(x=n, y=freq)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  labs(title="Number of speedmeasurements per GPS point", 
+       x="#-measurements", y = "occurance") +
+  theme_minimal()
+```
+As you can see more than half of the GPS points have more than 1 speedmeasurement attached to it. There are even (rare) cases where more 50 measurements are attributed to the same GPS position. This is strange, because the GPS has a high precision (as can be seen in later plots) and is likely keeping a constant tracking signal.

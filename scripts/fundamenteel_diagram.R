@@ -1,3 +1,8 @@
+###
+# Creates a fundamenteel diagram on NDW data
+# author: TomT
+###
+
 require("RPostgreSQL")
 require("ggplot2")
 require("hexbin")

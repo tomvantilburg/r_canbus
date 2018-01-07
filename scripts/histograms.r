@@ -1,51 +1,63 @@
+###
+# Several analysis on canbus data. 
+# e.g.: id's per day, aggregated measurements, heatmaps
+# authors: TomT
+###
+
+
 require("RPostgreSQL")
 require("ggplot2")
-require("quantreg")
-rain <- read.csv(file='/home/tomt/data/neerslaggeg_APELDOORN_543.csv',header=TRUE, sep=',')
-rain$Date <- as.Date(as.character(rain$YYYYMMDD),format='%Y%m%d')
-rain <- subset(rain, rain$Date> "2017-02-01" & rain$Date < "2017-10-12")
-Sys.setlocale(category = "LC_TIME", locale = "C")
-rain$Month <-  format(rain$Date,'%b')
-rain$Month <- factor(rain$Month,unique(all$Month))
-rain$Day <-  format(rain$Date,'%d')
-rain$day <- as.numeric(rain$Day)
-rain$Year <- format(rain$Date,'%Y')
-rain$year <- as.numeric(all$Year)
-ggplot(rain,aes(Date,RD)) + geom_point(shape=".") + geom_smooth() + theme_bw()
-
+require("hexbin")
 
 drv <- dbDriver("PostgreSQL")
 con <- dbConnect(drv, dbname = "research",
                  host = "localhost", port = 5433,
                  user = "postgres")
-df_postgres <- dbGetQuery(con, "
-        SELECT signalid, avg(value) as value, date_trunc('day',time) as time from canbus.data_2017 
-        WHERE signalid = 13
-        GROUP BY signalid, date_trunc('day',time)
-")
-#ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
-ggplot(df_postgres,aes(time,value)) + geom_point(shape="o") + geom_smooth() + theme_bw()
 
+#How many unique id's are active per day
 df_postgres <- dbGetQuery(con, "
-        SELECT signalid, count(value) as value, date_part('week',time) as time from canbus.data_2017 
-        WHERE signalid IN (253,254,257,262)
-        GROUP BY signalid, date_part('week',time)
+  SELECT count(DISTINCT vin) vehicles, date_trunc('day',time) date
+  FROM canbus.data_2017 
+  GROUP BY date_trunc('day',time)
+  ORDER BY date_trunc('day',time)
 ")
-#ggplot(df_postgres, aes(value)) + geom_freqpoly(binwidth = 2) + theme_bw()
-ggplot(df_postgres,aes(time,value)) + geom_point(shape="o") + geom_smooth() + theme_bw()
+#Conclusion: before 19-march id's are switched more then 1x a day
+ggplot(df_postgres,aes(date,vehicles)) + geom_line(color="steelblue") + theme_bw()
 
-#Histogram of time interval between speed measurements
+
+#Histogram of number of measurements per signal
 df_postgres <- dbGetQuery(con, "
-WITH diff AS (
-  SELECT vin,
-  geom,
-  date_part('seconds',time - lag(time) OVER (PARTITION BY vin ORDER BY time)) AS diff
-  FROM canbus.data_2017  
+  SELECT b.name, count(a.signalid) n
+  FROM canbus.data_2017 a
+  INNER JOIN canbus.signals b
+  ON a.signalid = b.signalid
   WHERE time > '2017-03-19'
-  AND signalid = 191
-)
-SELECT vin, max(diff) diff FROM diff 
-WHERE diff Is Not Null
-GROUP BY vin, geom;
+  GROUP BY b.name
+  ORDER BY b.name
 ")
-ggplot(df_postgres,aes(diff)) + geom_histogram() +theme_bw()
+ggplot(df_postgres, aes(x=name, y=n)) +
+  geom_bar(stat='identity',fill='steelblue') +
+  coord_flip() + theme_minimal()
+
+#histogram of number of speed measurements per geom
+df_postgres <- dbGetQuery(con, "
+  WITH grouped AS (
+    SELECT geom,count(geom) n
+    FROM canbus.data_2017 
+    WHERE signalid = 191 
+    AND value > 10
+    AND time > '2017-03-19'
+    GROUP BY geom
+  )
+  SELECT n, count(geom) freq
+  FROM grouped
+  GROUP BY n
+  ORDER BY n
+")
+ggplot(data=df_postgres, aes(x=n, y=freq)) +
+  geom_bar(stat="identity", fill="steelblue") +
+  labs(title="Number of speedmeasurements per GPS point", 
+       x="#-measurements", y = "occurance") +
+  theme_minimal()
+
+
