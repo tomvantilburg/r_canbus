@@ -73,7 +73,7 @@ JOIN c ON b4.uit = c.aan and b4.vin = c.vin)
 
 e as (SElECT vin, count(*) as n, ST_COLLECT(geom) as geom, to_timestamp(floor((extract('epoch' from brakeon) / 300 )) * 300) as tt 
 FROM d 
-WHERE dv < 5 and dt1 < 3 AND v0 > 100
+WHERE dv < 5 and dt2 < 3 AND v0 > 100
 GROUP BY vin, to_timestamp(floor((extract('epoch' from brakeon) / 300 )) * 300))
 
 SELECT * from  e WHERE n >= 5; 

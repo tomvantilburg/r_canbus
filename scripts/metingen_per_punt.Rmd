@@ -1,11 +1,11 @@
 ---
-title: "R-Canbus"
+title: "GPS-Updates"
 output:
   html_document:
     df_print: paged
 ---
 
-Inzicht in de snelheidsmetingen op de kaart. 
+Wanneer wordt een GPS-positie vernieuwd? Hoeveel tijd wordt er doorgaans 'doorgebracht' op een positie en hoeveel metingen vinden er plaats?
 
 ```{r}
 require("RPostgreSQL")
@@ -19,18 +19,19 @@ con <- dbConnect(drv,
                  user = "postgres")
 
 q = "
-  SELECT vin, 
+    SELECT vin, 
     min(time) as min_time, 
     max(time) as max_time, 
     COUNT(*) as count, 
     min(value) min_v, 
     max(value) as max_v, 
-    EXTRACT(EPOCH FROM (max(time)-MIN(time))) as dt, 
-    st_x(geom_rd), st_y(geom_rd) 
+    EXTRACT(EPOCH FROM (max(time) - (min(time)))) dt,
+    geom 
     FROM canbus.data_2017
-    WHERE signalid = 191 AND time > '2017-09-01'
-    GROUP BY geom_rd, vin
+    WHERE signalid = 191 AND value > 5  AND time > '2017-04-01' 
+    GROUP BY vin, geom
     ORDER BY vin, min_time;
+
   "
 x <- dbGetQuery(con, q)
 ```
@@ -50,38 +51,45 @@ LIMIT 10;
 dbDisconnect(con)
 ```
 
+```{r}
+hist(x = x$count, breaks = seq(from = 0, to = max(x$count), by = 1), 
+    right = F, xlim=c(0,50), freq = F, las=1,
+    xlab='# speed measurements at gps-position')
+```
+
+
 Hoe veel tijd zit er tussen eerste en laatste metingen op gps-punt? 
 ```{r}
-hist(x = x$dt, breaks = c(seq(0,60,10),5000), right = T, xlim=c(0,60), freq = F, las=1,
-     xlab='time between first and least measurement at point (s)')
+hist(x = x$dt, breaks = c(seq(0,60,1),max(x$dt)), right = T, xlim=c(0,60), freq = F, las=1,
+     xlab='time at gps-position (s)')
 ```
 
 Is er een relatie tussen aantal metingen op een punt en de tijd 'doorgebracht' op dat punt.
 ```{r}
-smoothScatter(x$count, x$dt, ylim=c(0,100), xlim=c(0,40),
-              xlab='# measurements',
-              ylab='time between first and least measurement at point (s)',
-              nbin = c(50,50),
-              bandwidth = c(1,1))
-
+plot(x$count, x$dt, ylim=c(0,100), xlim=c(0,40),
+              xlab='# speed measurements',
+              ylab='time at gps-position (s)',
+              col=rgb(r = 0, g = 0, b = 0, alpha = 0.05))
 abline(coef = c(0,1), h=60, lty=2, col=1)
+#text(x = 40, y = c(45, 60), labels = c('1/s', '60 s'), xpd=NA, pos = 3)
 grid()
 ```
 
-Twee patronen: 
+Twee patronen zijn zichtbaar: 
 
 * maximaal 1 meting per seconde, dus aantal metingen is in het algemeen niet groter dan het aantal seconden op een punt.
-* maximaal 60 seconden op een punt
+* maximaal 60 seconden op een punt? 
 
 Uit eerdere analyses weten we dat er bij iedere snelheidsverandering van 5 km/u een nieuwe snelheidsmeting wordt getriggerd. Hoe is het aantal metingen op een punt gerelateerd aan de range van geregistreerde snelheden op dat punt?
 
 ```{r}
-smoothScatter(x$count, y = x$max_v-x$min_v, 
+plot(x$count, y = x$max_v-x$min_v, 
               xlim = c(0, 60),
               xlab='# measurements', 
-              ylab = 'range of speed measurements (km/h)')
+              ylab = 'range of speed measurements (km/h)',
+              col = rgb(0,0,0,0.05))
 grid()
 abline(coef=c(0,5), lty=2)
 ```
 
-Volgens verwachting is het aantal metingen ongeveer evenredig met range van snelheid gedeeld door 5 -- of hoger dan dat. 
+Volgens verwachting is het aantal metingen evenredig met range van snelheid gedeeld door 5, omdat bij een snelheidsverandering van 5 km/u een nieuwe meting wordt getriggerd. Het aantal metingen kan ook hoger zijn (rechts van de lijn), omdat de snelheid binnen de range kan varieren en zo meerdere metingen kan triggeren. Punten links van de lijn stellen situaties voor waar de snelheid niet iedere 5 km/u wordt gemeten. 
