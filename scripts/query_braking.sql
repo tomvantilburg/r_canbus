@@ -1,7 +1,7 @@
 WITH a as (
   SELECT vin, time, value, signalid, geom
   FROM canbus.data_2017 
-  WHERE time > '2017-04-01' 
+  WHERE time > '2017-09-01' 
   --WHERE vin = '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682' 
 ),
 
