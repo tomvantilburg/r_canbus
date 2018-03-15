@@ -1,6 +1,7 @@
 ---
 title: "GPS-Updates"
 output:
+  word_document: default
   html_document:
     df_print: paged
 ---
