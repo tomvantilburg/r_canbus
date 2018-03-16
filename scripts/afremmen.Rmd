@@ -21,8 +21,8 @@ braking <- dbGetQuery(con, statement =
                       WITH a as (
   SELECT vin, time, value, signalid, geom
   FROM canbus.data_2017 
-  WHERE time > '2017-09-01' 
-  --WHERE vin = '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682' 
+  WHERE time >= '2017-06-01' 
+  --WHERE vin = 'fe41054ca9a55158862afd2b06aafe74eb31900f64ba89e070adaa52555b261b' 
 ),
 
 -- remsignalen en geometrie naar RD
@@ -93,7 +93,7 @@ JOIN c ON b4.uit = c.aan and b4.vin = c.vin;")
 
 speed <- dbGetQuery(con, "
                     SELECT value as speed, vin, time, location from canbus.data_2017
-                    WHERE signalid = 191 AND vin = '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682'
+                    WHERE signalid = 191 AND vin = 'fe41054ca9a55158862afd2b06aafe74eb31900f64ba89e070adaa52555b261b'
                     ")
 dbDisconnect(con)
 head(braking)
@@ -110,24 +110,24 @@ Het eerstvolgende rem-uit signaal geeft einde aan van het afremmen. De laatst ge
 ```{r}
 # plot voor enkele auto
 # remdata voor deze auto
-a = subset(braking, braking$vin == '03662eafcd5b8852e3663484376c027b8b7ea8b30829cae92853ba97d5d63682')
+a = subset(braking, braking$vin == 'fe41054ca9a55158862afd2b06aafe74eb31900f64ba89e070adaa52555b261b')
 
 # tijdstippen normaliseren naar 1-1-2017 zodat plotten makkelijker is
-a$on = strptime(paste('1/1/2017',substr(a$brakeon, 12, 19)), format='%d/%m/%Y %H:%M:%S')
-a$off = strptime(paste('1/1/2017',substr(a$brakeoff, 12, 19)), format='%d/%m/%Y %H:%M:%S')
-a$t_v0 = strptime(paste('1/1/2017',substr(a$t_v0, 12, 19)), format='%d/%m/%Y %H:%M:%S')
-a$t_v1 = strptime(paste('1/1/2017',substr(a$t_v1, 12, 19)), format='%d/%m/%Y %H:%M:%S')
-speed$time2 = strptime(paste('1/1/2017',substr(speed$time, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+#a$on = strptime(paste('1/1/2017',substr(a$brakeon, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+#a$off = strptime(paste('1/1/2017',substr(a$brakeoff, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+#a$t_v0 = strptime(paste('1/1/2017',substr(a$t_v0, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+#a$t_v1 = strptime(paste('1/1/2017',substr(a$t_v1, 12, 19)), format='%d/%m/%Y %H:%M:%S')
+#speed$time2 = strptime(paste('1/1/2017',substr(speed$time, 12, 19)), format='%d/%m/%Y %H:%M:%S')
 
 # plot snelheid
-plot(speed$time2, speed$speed, type='o', pch=21, cex=0.5,
-  xlim=c(as.numeric(as.POSIXct("2017-01-01 18:06:40")), as.numeric(as.POSIXct("2017-01-01 18:13:00"))), 
+plot(speed$time, speed$speed, type='o', pch=21, cex=0.5,
+  xlim=c(as.numeric(as.POSIXct("2017-06-01 12:00:00")), as.numeric(as.POSIXct("2017-06-01 12:10:00"))), 
   xaxt='n',
   xlab='time (hh:mm)', 
   ylab= 'verhicle speed (km/h)')
 
 # rechthoek van rem-aan tot rem-uit
-rect(xleft = a$on, xright = a$off, ytop = 140, ybottom = 0, col=rgb(0,0,0,0.2), border = NA)
+rect(xleft = a$brakeon, xright = a$brakeoff, ytop = 140, ybottom = 0, col=rgb(0,0,0,0.2), border = NA)
 
 # rechthoek van v0 tot v1 (snelheidsmetingen binnen remperiode)
 rect(xleft = a$t_v1, xright = a$t_v0, ybottom = a$v0, ytop = a$v1, col=rgb(1,0,0,0.4), border= NA)
@@ -144,7 +144,7 @@ legend(x = 'topleft',
 
 
 # as opmaken met tijd
-r <- as.POSIXct(round(range(speed$time2), "hours"))
+r <- as.POSIXct(round(range(speed$time), "hours"))
 axis.POSIXct(1, at = seq(r[1], r[2], by = "1 min"), format = "%H:%M")
 abline(v=seq(r[1], r[2], by = "1 min"), lty=3, col='grey')
 
