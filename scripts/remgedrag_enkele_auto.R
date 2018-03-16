@@ -77,5 +77,5 @@ legend(x='topleft',
        legend = c('brake on - brake off', 'speed reduction detected', 'speed'), 
        fill=c('grey', 'red', NA), 
        border=NA, 
-       lty=c(NA,NA,1), lty= 'n')
+       lty=c(NA,NA,1), bty= 'n')
 
