@@ -16,7 +16,7 @@ con <- dbConnect(drv, dbname = "research",
                  host = "metis", port = 5433,
                  user = "postgres")
 
-fn = "C:/Users/joepk/Documents/GitHub/r_canbus/scripts/query_braking.sql"
+fn = "query_braking.sql"
 zz <- file(fn, "r")
 #q = readLines(zz)
 q <- readChar(zz, file.info(fn)$size)
