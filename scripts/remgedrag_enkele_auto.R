@@ -58,9 +58,15 @@ v$a = v$dv / v$dt
 
 
 # test remmomenten voor een auto
-plot(s$time, s$speed, type='o', pch=16, cex=0.5,
+plot(x = s$time, 
+     y = s$speed, 
+     type='o', 
+     pch=16, 
+     cex=0.5,
      xlim=c(as.numeric(as.POSIXct("2017-06-01 12:00:00")), as.numeric(as.POSIXct("2017-06-01 12:10:00"))),
-     ylab='speed (km/h)', xlab='time (minutes)')
+     xlab='time (minutes)',
+     ylab='speed (km/h)', 
+     las=1)
 
 r <- as.POSIXct(round(range(s$time), "hours"))
 axis.POSIXct(1, at = seq(r[1], r[2], by = "min"), format = "%M")
@@ -70,12 +76,12 @@ col = rev(brewer.pal(n = 9, name = 'Reds'))
 
 rect(xleft = v$rem_aan, xright = v$rem_uit, ytop = 0, ybottom = -5, col= 'grey')
 vv = subset(x = v, subset = dv < 0 & dt > 0)
-rect(xleft = vv$t0, xright = vv$t1, ytop = vv$v0, ybottom = vv$v1, col=rgb(red=t(col2rgb(col[cut(vv$a, b = 8)])), alpha = 100, maxColorValue = 255))
+rect(xleft = vv$t0, xright = vv$t1, ytop = vv$v0, ybottom = vv$v1, col=rgb(1,0,0,0.5), border = NA)
 rug(x=b$time, col=2, lwd=2, ticksize =0.03)
 rug(x=l$time, col=3, lwd=2, ticksize =0.03)
 legend(x='topleft', 
        legend = c('brake on - brake off', 'speed reduction detected', 'speed'), 
-       fill=c('grey', 'red', NA), 
+       fill=c('grey', rgb(1,0,0,0.5), NA), 
        border=NA, 
-       lty=c(NA,NA,1), bty= 'n')
+       lty=c(NA,NA,1), bty= 'n', pch=c(NA,NA,16))
 
